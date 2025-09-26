@@ -1,0 +1,19 @@
+services:
+  baseimage:
+    build:
+      context: ../..
+      dockerfile: Sources/docker/Dockerfile.baseImage
+    image: baseimage:latest
+
+  fsgfuzz:
+    build:
+      context: ../..
+      dockerfile: Sources/docker/Dockerfile.fsgfuzz
+    depends_on:
+      - baseimage
+    container_name: fsgfuzz
+    privileged: true
+    volumes:
+      - ../..:/workspace/local-code
+    tty: true
+    stdin_open: true
