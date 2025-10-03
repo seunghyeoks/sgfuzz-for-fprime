@@ -29,9 +29,9 @@ log_error() {
 print_banner() {
     echo ""
     echo "=========================================="
-    echo "  F Prime LibFuzzer - Auto Fuzzer"
+    echo "  SGFuzz for F Prime - Auto Fuzzer"
     echo "  Target: CmdDispatcher Component"
-    echo "  Engine: Clang LibFuzzer + ASan"
+    echo "  Engine: SGFuzz (Stateful Greybox Fuzzer)"
     echo "=========================================="
     echo ""
 }
@@ -72,29 +72,23 @@ setup_environment() {
     echo "  - CXX: ${CXX}"
 }
 
-# SGFuzz 라이브러리 확인 (선택 사항)
-# 현재는 표준 LibFuzzer를 사용하므로 SGFuzz는 필요 없음
+# SGFuzz 라이브러리 확인 및 빌드
 check_sgfuzz() {
-    # SGFuzz 사용 여부 확인
-    if [ "${USE_SGFUZZ:-false}" = "true" ]; then
-        log_info "SGFuzz 라이브러리 확인 중..."
+    log_info "SGFuzz 라이브러리 확인 중..."
+    
+    if [ ! -f "${SGFUZZ_ROOT}/libsfuzzer.a" ]; then
+        log_warning "libsfuzzer.a를 찾을 수 없습니다. SGFuzz 빌드를 시작합니다..."
+        cd "${SGFUZZ_ROOT}"
+        ./build.sh
         
         if [ ! -f "${SGFUZZ_ROOT}/libsfuzzer.a" ]; then
-            log_warning "libsfuzzer.a를 찾을 수 없습니다. SGFuzz 빌드를 시작합니다..."
-            cd "${SGFUZZ_ROOT}"
-            ./build.sh
-            
-            if [ ! -f "${SGFUZZ_ROOT}/libsfuzzer.a" ]; then
-                log_error "SGFuzz 빌드 실패!"
-                exit 1
-            fi
+            log_error "SGFuzz 빌드 실패!"
+            exit 1
         fi
-        
-        log_success "SGFuzz 라이브러리 확인 완료: ${SGFUZZ_ROOT}/libsfuzzer.a"
-    else
-        log_info "표준 LibFuzzer 사용 (SGFuzz 비활성화)"
-        log_info "SGFuzz를 사용하려면 USE_SGFUZZ=true 환경 변수를 설정하세요"
     fi
+    
+    log_success "SGFuzz 라이브러리 확인 완료: ${SGFUZZ_ROOT}/libsfuzzer.a"
+    log_info "상태 계측(State Instrumentation): ${USE_STATE_INSTRUMENTATION:-DISABLED}"
 }
 
 # 퍼징 타겟 자동 생성
@@ -219,7 +213,8 @@ run_fuzzer() {
     echo "=========================================="
     echo "  퍼저 설정:"
     echo "  - 실행 파일: ${FUZZER_EXEC}"
-    echo "  - 퍼징 엔진: LibFuzzer + AddressSanitizer"
+    echo "  - 퍼징 엔진: SGFuzz + AddressSanitizer"
+    echo "  - 상태 추적: ${USE_STATE_INSTRUMENTATION:-비활성화 (기본 커버리지 기반)}"
     echo "  - 최대 입력 크기: ${FUZZ_MAX_LEN} bytes"
     echo "  - 실행 횟수: ${FUZZ_RUNS} (0=무한)"
     echo "  - 타임아웃: ${FUZZ_TIMEOUT}초"
