@@ -1,13 +1,15 @@
-FROM baseImage:latest
+FROM baseimage:latest
 
 WORKDIR /workspace/sgfuzz-for-fprime
 
-# libFuzzer 진입점 스크립트 복사 (COPY 명령어 대신 클론된 저장소에서 복사)
-RUN cp /workspace/sgfuzz-for-fprime/Sources/entrypoint.sh /usr/local/bin/entrypoint.sh
+# 로컬 스크립트 및 파일 복사
+COPY Sources/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY scripts/ /workspace/sgfuzz-for-fprime/scripts/
 
-# 줄 끝 문자 변환
+# 줄 끝 문자 변환 및 권한 설정
 RUN dos2unix /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /workspace/sgfuzz-for-fprime/scripts/*.py 2>/dev/null || true
 
 # 컨테이너 실행 시 libFuzzer 컴파일 및 실행
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
