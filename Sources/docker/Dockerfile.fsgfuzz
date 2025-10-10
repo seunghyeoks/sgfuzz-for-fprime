@@ -1,13 +1,48 @@
-FROM baseImage:latest
+FROM baseimage:latest
+
+# 브랜치 인자 설정 (기본값: try)
+ARG BRANCH=try
 
 WORKDIR /workspace/sgfuzz-for-fprime
 
-# libFuzzer 진입점 스크립트 복사 (COPY 명령어 대신 클론된 저장소에서 복사)
-RUN cp /workspace/sgfuzz-for-fprime/Sources/entrypoint.sh /usr/local/bin/entrypoint.sh
+# 원하는 브랜치로 변경하고 최신 코드 가져오기
+RUN git fetch origin && \
+    git checkout ${BRANCH} && \
+    git pull origin ${BRANCH} && \
+    git submodule update --recursive
 
-# 줄 끝 문자 변환
-RUN dos2unix /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# SGFuzz 강제 재빌드 (FuzzerStateMachine 포함 확인)
+# BaseImage의 오래된 libsfuzzer.a를 삭제하고 새로 빌드
+RUN cd SGFuzz && \
+    rm -f libsfuzzer.a Fuzzer*.o && \
+    echo "Patching FuzzerStateMachine.h for Ubuntu compatibility..." && \
+    sed -i '/#include "FuzzerDefs.h"/a #include <limits>  \/\/ for std::numeric_limits (Ubuntu libstdc++ compatibility)' FuzzerStateMachine.h && \
+    echo "Verifying patch applied:" && \
+    head -5 FuzzerStateMachine.h && \
+    dos2unix build.sh && \
+    ./build.sh && \
+    echo "Verifying libsfuzzer.a contents:" && \
+    ls -lh libsfuzzer.a && \
+    ar t libsfuzzer.a | grep FuzzerStateMachine || (echo "ERROR: FuzzerStateMachine.o not found!" && exit 1)
 
-# 컨테이너 실행 시 libFuzzer 컴파일 및 실행
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# 모듈화된 스크립트 디렉토리 전체 복사
+COPY Sources/shell/ /usr/local/bin/fuzz_scripts/
+COPY Sources/generator/ /workspace/sgfuzz-for-fprime/Sources/generator/
+
+# fuzz 추가로 인한 빌드 디렉토리 정리 (다음 generate에서 fuzz 포함)
+RUN rm -rf /workspace/sgfuzz-for-fprime/fprime/build-fprime-automatic-native
+
+# 줄 끝 문자 변환 (모든 .sh 파일)
+RUN find /usr/local/bin/fuzz_scripts -name "*.sh" -exec dos2unix {} \;
+
+# 실행 권한 부여 (모든 .sh 파일)
+RUN find /usr/local/bin/fuzz_scripts -name "*.sh" -exec chmod +x {} \;
+
+# Python 스크립트 권한 설정
+RUN chmod +x /workspace/sgfuzz-for-fprime/scripts/*.py 2>/dev/null || true
+
+# 심볼릭 링크 생성 (호환성 유지)
+RUN ln -sf /usr/local/bin/fuzz_scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# 컨테이너 실행 시 메인 엔트리포인트 실행
+ENTRYPOINT ["/usr/local/bin/fuzz_scripts/entrypoint.sh"]
