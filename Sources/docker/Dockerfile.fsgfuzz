@@ -11,12 +11,19 @@ RUN git fetch origin && \
     git pull origin ${BRANCH} && \
     git submodule update --recursive
 
+# SGFuzz 재빌드 (FuzzerStateMachine 포함 확인)
+WORKDIR /workspace/sgfuzz-for-fprime/SGFuzz
+RUN ./build.sh
+
 # 모듈화된 스크립트 디렉토리 전체 복사
+WORKDIR /workspace/sgfuzz-for-fprime
 COPY Sources/shell/ /usr/local/bin/fuzz_scripts/
 COPY Sources/generator/ /workspace/sgfuzz-for-fprime/Sources/generator/
 
 # fuzz 추가로 인한 빌드 디렉토리 정리 (다음 generate에서 fuzz 포함)
 RUN rm -rf /workspace/sgfuzz-for-fprime/fprime/build-fprime-automatic-native
+
+WORKDIR /workspace/sgfuzz-for-fprime
 
 # 줄 끝 문자 변환 (모든 .sh 파일)
 RUN find /usr/local/bin/fuzz_scripts -name "*.sh" -exec dos2unix {} \;

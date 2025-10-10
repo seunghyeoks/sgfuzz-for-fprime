@@ -79,12 +79,11 @@ if(ENABLE_FUZZ)
     {component_name}_fuzz
     SOURCES
       "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트
-      "${{SGFUZZ_ROOT}}/FuzzerStateMachine.cpp"                # SGFuzz 상태 머신 (필수!)
     AUTOCODER_INPUTS
       "${{CMAKE_CURRENT_LIST_DIR}}/{fpp_input}"                # 원본 .fpp로 오토코더 실행
     DEPENDS
       Svc_{component_name}  # 원본 컴포넌트 라이브러리 (언더스코어 사용)
-      ${{EXTRA_DEPS}}       # SGFuzz 라이브러리 및 기타 의존성
+      ${{EXTRA_DEPS}}       # SGFuzz 라이브러리 (FuzzerStateMachine.o 포함)
   )
 
   # 원본 컴포넌트가 먼저 빌드되도록 명시적 의존성 추가
