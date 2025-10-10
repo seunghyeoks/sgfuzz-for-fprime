@@ -61,15 +61,14 @@ if(ENABLE_FUZZ)
   endif()
 
   # 퍼징 실행 파일 등록 (원본 컴포넌트 링크 방식)
-  # MOD_DEPS로 원본 컴포넌트를 링크하면 오토코더 파일도 자동으로 포함됨
+  # DEPENDS로 원본 컴포넌트를 링크하면 오토코더 파일도 자동으로 포함됨
   register_fprime_executable(
     {component_name}_fuzz
     SOURCES
       "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트만
-    MOD_DEPS
+    DEPENDS
       Svc/{component_name}  # 원본 컴포넌트 링크 (오토코더 + 구현 모두 포함)
-    LINK_LIBS
-      ${{EXTRA_DEPS}}
+      ${{EXTRA_DEPS}}       # SGFuzz 라이브러리 및 기타 의존성
   )
 
   # 컴파일 및 링크 옵션 설정
