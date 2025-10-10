@@ -48,7 +48,16 @@ RUN git submodule update --init --recursive
 
 # SGFuzz 빌드
 WORKDIR /workspace/sgfuzz-for-fprime/SGFuzz
-RUN ./build.sh
+RUN rm -f libsfuzzer.a Fuzzer*.o && \
+    echo "Patching FuzzerStateMachine.h for Ubuntu compatibility..." && \
+    sed -i '/#include "FuzzerDefs.h"/a #include <limits>  \/\/ for std::numeric_limits (Ubuntu libstdc++ compatibility)' FuzzerStateMachine.h && \
+    echo "Verifying patch applied:" && \
+    head -5 FuzzerStateMachine.h && \
+    dos2unix build.sh && \
+    ./build.sh && \
+    echo "Verifying libsfuzzer.a contents:" && \
+    ls -lh libsfuzzer.a && \
+    ar t libsfuzzer.a | grep FuzzerStateMachine || (echo "ERROR: FuzzerStateMachine.o not found!" && exit 1)
 
 # 작업 디렉토리 다시 설정
 WORKDIR /workspace/sgfuzz-for-fprime
