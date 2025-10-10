@@ -282,3 +282,9 @@ pyrightconfig.json
 
 /docs
 /references
+
+# Fuzz output directory
+/fuzz_output/
+
+# Environment file
+.fuzz_env

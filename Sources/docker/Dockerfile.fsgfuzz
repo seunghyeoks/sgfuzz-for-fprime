@@ -2,14 +2,20 @@ FROM baseimage:latest
 
 WORKDIR /workspace/sgfuzz-for-fprime
 
-# 로컬 스크립트 및 파일 복사
-COPY Sources/entrypoint.sh /usr/local/bin/entrypoint.sh
-COPY scripts/ /workspace/sgfuzz-for-fprime/scripts/
+# 모듈화된 스크립트 디렉토리 전체 복사
+COPY Sources/shell/ /usr/local/bin/fuzz_scripts/
 
-# 줄 끝 문자 변환 및 권한 설정
-RUN dos2unix /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+# 줄 끝 문자 변환 (모든 .sh 파일)
+RUN find /usr/local/bin/fuzz_scripts -name "*.sh" -exec dos2unix {} \;
+
+# 실행 권한 부여 (모든 .sh 파일)
+RUN find /usr/local/bin/fuzz_scripts -name "*.sh" -exec chmod +x {} \;
+
+# Python 스크립트 권한 설정
 RUN chmod +x /workspace/sgfuzz-for-fprime/scripts/*.py 2>/dev/null || true
 
-# 컨테이너 실행 시 libFuzzer 컴파일 및 실행
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# 심볼릭 링크 생성 (호환성 유지)
+RUN ln -sf /usr/local/bin/fuzz_scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# 컨테이너 실행 시 메인 엔트리포인트 실행
+ENTRYPOINT ["/usr/local/bin/fuzz_scripts/entrypoint.sh"]

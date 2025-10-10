@@ -25,14 +25,23 @@ docker-compose up --build fsgfuzz
 
 ### 2. 실행 과정
 
-컨테이너가 시작되면 다음 작업이 자동으로 수행됩니다:
+컨테이너가 시작되면 모듈화된 스크립트들이 순차적으로 실행됩니다:
 
-1. ✅ 환경 변수 설정
-2. ✅ SGFuzz 라이브러리 확인/빌드
-3. ✅ 퍼징 타겟 자동 생성 (`setup_fuzz_target.py`)
-4. ✅ F Prime 프로젝트 빌드 (`fprime-util`)
-5. ✅ 퍼저 실행 (LibFuzzer)
-6. ✅ 결과 요약 출력
+1. ✅ **환경 변수 설정** (`01_setup_environment.sh`)
+2. ✅ **의존성 확인** (`02_check_dependencies.sh`)
+   - 필수 도구 확인 (fprime-util, clang, python3)
+   - SGFuzz 라이브러리 확인/빌드
+3. ✅ **퍼징 타겟 설정** (`03_setup_fuzz_target.sh`)
+   - setup_fuzz_target.py 실행
+   - CMakeLists.txt 및 퍼저 엔트리포인트 생성
+4. ✅ **F Prime 빌드** (`04_build_fprime.sh`)
+   - fprime-util generate
+   - fprime-util build --target CmdDispatcher_fuzz
+5. ✅ **퍼저 실행** (`05_run_fuzzer.sh`)
+   - LibFuzzer 실행 및 로그 수집
+6. ✅ **결과 요약 출력**
+
+각 스크립트는 `Sources/shell/` 디렉토리에 모듈화되어 있습니다.
 
 ### 3. 결과 확인
 
@@ -175,9 +184,41 @@ find /workspace/sgfuzz-for-fprime/fprime/build-fprime-automatic-native -name "Cm
 
 ## 🔧 개발자용
 
+### 스크립트 구조
+
+모듈화된 스크립트 구조:
+```
+Sources/shell/
+├── common.sh                    # 공통 함수 (로깅, 유틸리티)
+├── 01_setup_environment.sh      # 환경 변수 설정
+├── 02_check_dependencies.sh     # 의존성 확인
+├── 03_setup_fuzz_target.sh      # 퍼징 타겟 생성
+├── 04_build_fprime.sh           # F Prime 빌드
+├── 05_run_fuzzer.sh             # 퍼저 실행
+└── entrypoint.sh                # 메인 오케스트레이터
+```
+
+자세한 내용은 `Sources/shell/README.md`를 참조하세요.
+
+### 개별 단계 실행
+
+컨테이너 내부에서 특정 단계만 다시 실행할 수 있습니다:
+
+```bash
+# 컨테이너 접속
+docker exec -it fsgfuzz /bin/bash
+
+# 환경 변수 로드
+source /workspace/sgfuzz-for-fprime/.fuzz_env
+
+# 특정 단계만 실행
+source /usr/local/bin/fuzz_scripts/04_build_fprime.sh
+source /usr/local/bin/fuzz_scripts/05_run_fuzzer.sh
+```
+
 ### entrypoint.sh 수정
 
-컨테이너 시작 동작을 변경하려면 `Sources/entrypoint.sh`를 수정하세요.
+컨테이너 시작 동작을 변경하려면 `Sources/shell/entrypoint.sh` 또는 개별 스크립트를 수정하세요.
 
 ### 다른 컴포넌트 퍼징
 
@@ -196,6 +237,8 @@ docker-compose run -e COMPONENT_NAME=ActiveLogger fsgfuzz
 
 ## 📚 참고 자료
 
+- [SUMMARY.md](../../docs/SUMMARY.md) - F Prime + SGFuzz 통합 전략 요약
+- [shell/README.md](../shell/README.md) - 자동화 스크립트 가이드
 - [RESEARCH3.md](../../docs/RESEARCH3.md) - 상세 기술 문서
 - [SGFuzz GitHub](https://github.com/bajinsheng/SGFuzz) - SGFuzz 공식 저장소
 - [F Prime Documentation](https://nasa.github.io/fprime/) - F Prime 공식 문서
