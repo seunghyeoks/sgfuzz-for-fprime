@@ -79,6 +79,7 @@ if(ENABLE_FUZZ)
     {component_name}_fuzz
     SOURCES
       "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트
+      "${{SGFUZZ_ROOT}}/FuzzerStateMachine.cpp"                # SGFuzz 상태 머신 (필수!)
     AUTOCODER_INPUTS
       "${{CMAKE_CURRENT_LIST_DIR}}/{fpp_input}"                # 원본 .fpp로 오토코더 실행
     DEPENDS
