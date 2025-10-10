@@ -28,8 +28,21 @@ def create_fuzz_directory(component_path):
     return fuzz_dir
 
 
-def generate_cmake_lists(fuzz_dir, component_name, project_root):
+def generate_cmake_lists(fuzz_dir, component_name, project_root, component_path):
     """RESEARCH3.md의 수정안 기반 CMakeLists.txt 생성"""
+    
+    # .fpp 파일 찾기
+    parent_dir = fuzz_dir.parent
+    fpp_files = list(parent_dir.glob("*.fpp"))
+    
+    if not fpp_files:
+        print(f"⚠️  경고: {component_name}.fpp 파일을 찾을 수 없습니다.")
+        print(f"   디렉토리: {parent_dir}")
+        fpp_input = f"../{component_name}.fpp"
+    else:
+        fpp_file = fpp_files[0]
+        print(f"✅ FPP 파일 발견: {fpp_file.name}")
+        fpp_input = f"../{fpp_file.name}"
     
     cmake_content = f'''# Auto-generated CMakeLists.txt for {component_name} fuzzing target
 # Generated at: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
@@ -60,16 +73,24 @@ if(ENABLE_FUZZ)
     list(APPEND EXTRA_DEPS dl)
   endif()
 
-  # 퍼징 실행 파일 등록 (원본 컴포넌트 링크 방식)
-  # DEPENDS로 원본 컴포넌트를 링크하면 오토코더 파일도 자동으로 포함됨
+  # 퍼징 실행 파일 등록
+  # AUTOCODER_INPUTS로 원본 컴포넌트의 .fpp 파일을 지정하여 오토코더 실행
   register_fprime_executable(
     {component_name}_fuzz
     SOURCES
-      "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트만
+      "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트
+    AUTOCODER_INPUTS
+      "${{CMAKE_CURRENT_LIST_DIR}}/{fpp_input}"                # 원본 .fpp로 오토코더 실행
     DEPENDS
-      Svc/{component_name}  # 원본 컴포넌트 링크 (오토코더 + 구현 모두 포함)
+      Svc/{component_name}  # 원본 컴포넌트 구현 링크
       ${{EXTRA_DEPS}}       # SGFuzz 라이브러리 및 기타 의존성
   )
+
+  # 원본 컴포넌트가 먼저 빌드되도록 명시적 의존성 추가
+  if(TARGET Svc_{component_name})
+    add_dependencies({component_name}_fuzz Svc_{component_name})
+    message(STATUS "  - Build dependency: Svc_{component_name} will be built first")
+  endif()
 
   # 컴파일 및 링크 옵션 설정
   target_compile_options({component_name}_fuzz PRIVATE 
@@ -370,7 +391,7 @@ def main():
         fuzz_dir = create_fuzz_directory(component_path)
         
         # 2. CMakeLists.txt 생성
-        generate_cmake_lists(fuzz_dir, component_name, project_root)
+        generate_cmake_lists(fuzz_dir, component_name, project_root, component_path)
         
         # 3. 퍼저 엔트리포인트 생성
         generate_fuzzer_entrypoint(fuzz_dir, component_name)
