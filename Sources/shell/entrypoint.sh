@@ -10,6 +10,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # 공통 함수 로드
 source "${SCRIPT_DIR}/common.sh"
 
+# 컨테이너 환경 확인
+if [ ! -d "/workspace/sgfuzz-for-fprime" ]; then
+    echo "❌ 컨테이너 환경이 아닙니다!"
+    echo "❌ 이 스크립트는 Docker 컨테이너 내부에서만 실행되어야 합니다."
+    echo "💡 사용법: docker-compose up --build fsgfuzz"
+    exit 1
+fi
+
 # ===========================================
 # 메인 배너 출력
 # ===========================================

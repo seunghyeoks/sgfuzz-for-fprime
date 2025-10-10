@@ -8,8 +8,15 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
+# 컨테이너 환경 확인
+if [ ! -d "/workspace/sgfuzz-for-fprime" ]; then
+    log_error "컨테이너 환경이 아닙니다!"
+    log_error "이 스크립트는 Docker 컨테이너 내부에서만 실행되어야 합니다."
+    exit 1
+fi
+
 # 환경 변수 로드
-ENV_FILE="${PROJECT_ROOT:-/workspace/sgfuzz-for-fprime}/.fuzz_env"
+ENV_FILE="/workspace/sgfuzz-for-fprime/.fuzz_env"
 if [ -f "${ENV_FILE}" ]; then
     source "${ENV_FILE}"
 fi

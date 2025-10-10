@@ -11,10 +11,18 @@ source "${SCRIPT_DIR}/common.sh"
 log_step "1" "환경 변수 설정"
 start_timer
 
-# 프로젝트 경로 설정
-export PROJECT_ROOT="${PROJECT_ROOT:-/workspace/sgfuzz-for-fprime}"
-export FPRIME_ROOT="${FPRIME_ROOT:-${PROJECT_ROOT}/fprime}"
-export SGFUZZ_ROOT="${SGFUZZ_ROOT:-${PROJECT_ROOT}/SGFuzz}"
+# 컨테이너 환경 확인
+if [ ! -d "/workspace/sgfuzz-for-fprime" ]; then
+    log_error "컨테이너 환경이 아닙니다!"
+    log_error "이 스크립트는 Docker 컨테이너 내부에서만 실행되어야 합니다."
+    log_info "사용법: docker-compose up --build fsgfuzz"
+    exit 1
+fi
+
+# 프로젝트 경로 설정 (컨테이너 내부 경로만 사용)
+export PROJECT_ROOT="/workspace/sgfuzz-for-fprime"
+export FPRIME_ROOT="${PROJECT_ROOT}/fprime"
+export SGFUZZ_ROOT="${PROJECT_ROOT}/SGFuzz"
 
 # 컴포넌트 설정 (Docker 환경 변수 또는 기본값)
 export COMPONENT_NAME="${COMPONENT_NAME:-CmdDispatcher}"
