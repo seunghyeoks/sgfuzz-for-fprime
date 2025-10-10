@@ -54,58 +54,25 @@ if(ENABLE_FUZZ)
   unset(UT_SOURCE_FILES)
   unset(EXECUTABLE_NAME)
 
-  # 1) 원본 소스를 빌드 디렉토리로 복사
-  set(INSTR_DIR "${{CMAKE_BINARY_DIR}}/instrumented/Svc/{component_name}")
-  
-  add_custom_command(
-    OUTPUT "${{INSTR_DIR}}/.copied"
-    COMMAND ${{CMAKE_COMMAND}} -E make_directory "${{INSTR_DIR}}"
-    COMMAND ${{CMAKE_COMMAND}} -E copy_directory "${{CMAKE_CURRENT_LIST_DIR}}/.." "${{INSTR_DIR}}"
-    COMMAND ${{CMAKE_COMMAND}} -E touch "${{INSTR_DIR}}/.copied"
-    COMMENT "Copying {component_name} sources for instrumentation"
-    VERBATIM
-  )
-
-  # 2) SGFuzz 상태 계측 적용
-  add_custom_command(
-    OUTPUT "${{INSTR_DIR}}/.instrumented"
-    DEPENDS "${{INSTR_DIR}}/.copied"
-    COMMAND python3 "${{SGFUZZ_ROOT}}/sanitizer/State_machine_instrument.py" "${{INSTR_DIR}}"
-    COMMAND ${{CMAKE_COMMAND}} -E touch "${{INSTR_DIR}}/.instrumented"
-    COMMENT "Instrumenting {component_name} sources with SGFuzz state tracking"
-    VERBATIM
-  )
-  
-  add_custom_target({component_name}_instrument ALL DEPENDS "${{INSTR_DIR}}/.instrumented")
-
-  # 3) 계측된 소스 파일 목록 (동적 수집)
-  file(GLOB INSTR_SOURCES 
-    "${{INSTR_DIR}}/*.cpp"
-  )
-
-  # 4) 플랫폼 의존 링크 항목 구성
+  # 플랫폼 의존 링크 항목 구성
   set(EXTRA_DEPS "${{SGFUZZ_ROOT}}/libsfuzzer.a" pthread)
   if(NOT APPLE)
     list(APPEND EXTRA_DEPS dl)
   endif()
 
-  # 5) 퍼징 실행 파일 등록 (최신 F Prime API)
-  # 첫 번째 인자로 실행 파일 이름 전달, SOURCES와 DEPENDS 키워드 사용
+  # 퍼징 실행 파일 등록 (원본 컴포넌트 링크 방식)
+  # MOD_DEPS로 원본 컴포넌트를 링크하면 오토코더 파일도 자동으로 포함됨
   register_fprime_executable(
     {component_name}_fuzz
     SOURCES
-      "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트
-      ${{INSTR_SOURCES}}                                       # 계측된 구현 파일들
-    AUTOCODER_INPUTS
-      "${{CMAKE_CURRENT_LIST_DIR}}/../{component_name}.fpp"    # 베이스 클래스 오토코드 포함
-    DEPENDS
+      "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트만
+    MOD_DEPS
+      Svc/{component_name}  # 원본 컴포넌트 링크 (오토코더 + 구현 모두 포함)
+    LINK_LIBS
       ${{EXTRA_DEPS}}
   )
 
-  # 6) 계측 의존성 추가
-  add_dependencies({component_name}_fuzz {component_name}_instrument)
-
-  # 7) 컴파일 및 링크 옵션 설정
+  # 컴파일 및 링크 옵션 설정
   target_compile_options({component_name}_fuzz PRIVATE 
     -fsanitize=fuzzer-no-link  # LibFuzzer 메인 중복 방지
     -g                         # 디버그 심볼
@@ -116,13 +83,15 @@ if(ENABLE_FUZZ)
     -fsanitize=fuzzer-no-link
   )
 
-  # 8) SGFuzz 헤더 경로 추가
+  # SGFuzz 헤더 경로 추가
   target_include_directories({component_name}_fuzz PRIVATE 
     "${{SGFUZZ_ROOT}}"
     "${{SGFUZZ_ROOT}}/include"
   )
 
   message(STATUS "Fuzz target {component_name}_fuzz configured successfully")
+  message(STATUS "  - Using original component: Svc/{component_name}")
+  message(STATUS "  - SGFuzz library: ${{SGFUZZ_ROOT}}/libsfuzzer.a")
 else()
   message(STATUS "Fuzzing disabled for {component_name}")
 endif()

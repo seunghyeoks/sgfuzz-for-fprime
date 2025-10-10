@@ -35,12 +35,16 @@ if [ -d "${BUILD_DIR}" ]; then
     CLEAN_BUILD="${CLEAN_BUILD:-true}"
     
     if [ "${CLEAN_BUILD}" = "true" ]; then
+        log_info "fuzz 타겟 추가로 인한 클린 빌드 필요"
         log_info "기존 빌드 디렉토리 삭제 중..."
         rm -rf "${BUILD_DIR}"
         log_success "빌드 디렉토리 정리 완료"
     else
         log_info "기존 빌드 디렉토리 유지 (CLEAN_BUILD=false)"
+        log_warning "⚠️  증분 빌드는 fuzz 타겟의 오토코더 파일을 생성하지 못할 수 있습니다."
     fi
+else
+    log_info "빌드 디렉토리가 없습니다. 클린 빌드를 수행합니다."
 fi
 
 # ===========================================
