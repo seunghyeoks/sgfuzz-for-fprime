@@ -82,7 +82,7 @@ if(ENABLE_FUZZ)
     AUTOCODER_INPUTS
       "${{CMAKE_CURRENT_LIST_DIR}}/{fpp_input}"                # 원본 .fpp로 오토코더 실행
     DEPENDS
-      Svc/{component_name}  # 원본 컴포넌트 구현 링크
+      Svc_{component_name}  # 원본 컴포넌트 라이브러리 (언더스코어 사용)
       ${{EXTRA_DEPS}}       # SGFuzz 라이브러리 및 기타 의존성
   )
 
@@ -110,7 +110,8 @@ if(ENABLE_FUZZ)
   )
 
   message(STATUS "Fuzz target {component_name}_fuzz configured successfully")
-  message(STATUS "  - Using original component: Svc/{component_name}")
+  message(STATUS "  - Linked library: Svc_{component_name}")
+  message(STATUS "  - Autocoder input: {fpp_input}")
   message(STATUS "  - SGFuzz library: ${{SGFUZZ_ROOT}}/libsfuzzer.a")
 else()
   message(STATUS "Fuzzing disabled for {component_name}")
