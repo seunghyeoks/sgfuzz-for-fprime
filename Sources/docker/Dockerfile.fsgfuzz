@@ -16,7 +16,9 @@ RUN git fetch origin && \
 RUN cd SGFuzz && \
     rm -f libsfuzzer.a Fuzzer*.o && \
     echo "Patching FuzzerStateMachine.h for Ubuntu compatibility..." && \
-    sed -i '2a #include <limits>  // for std::numeric_limits (Ubuntu libstdc++ compatibility)' FuzzerStateMachine.h && \
+    sed -i '/#include "robin_hood.h"/a #include <limits>  \/\/ for std::numeric_limits (Ubuntu libstdc++ compatibility)' FuzzerStateMachine.h && \
+    echo "Verifying patch applied:" && \
+    head -5 FuzzerStateMachine.h && \
     dos2unix build.sh && \
     ./build.sh && \
     echo "Verifying libsfuzzer.a contents:" && \
