@@ -61,10 +61,10 @@ fi
 
 cd "${PROJECT_ROOT}"
 
-# Python 스크립트 실행 (--force 옵션으로 강제 생성)
-log_info "명령: python3 ${SETUP_SCRIPT} --component ${COMPONENT_NAME} --force"
+# Python 스크립트 실행 (--path 옵션으로 절대 경로 전달)
+log_info "명령: python3 ${SETUP_SCRIPT} --path ${COMPONENT_PATH} --force"
 
-if ! python3 "${SETUP_SCRIPT}" --component "${COMPONENT_NAME}" --force; then
+if ! python3 "${SETUP_SCRIPT}" --path "${COMPONENT_PATH}" --force; then
     log_error "퍼징 타겟 생성 실패!"
     log_error "setup_fuzz_target.py 실행 중 오류가 발생했습니다."
     exit 1

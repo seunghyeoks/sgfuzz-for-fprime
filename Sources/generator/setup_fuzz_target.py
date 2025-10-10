@@ -14,8 +14,10 @@ from datetime import datetime
 
 def get_project_root():
     """프로젝트 루트 디렉토리 반환"""
-    script_dir = Path(__file__).resolve().parent
-    return script_dir.parent
+    # 스크립트가 Sources/generator/ 안에 있으므로 두 단계 위로 올라감
+    script_dir = Path(__file__).resolve().parent  # Sources/generator
+    sources_dir = script_dir.parent                # Sources
+    return sources_dir.parent                      # 프로젝트 루트
 
 
 def create_fuzz_directory(component_path):
