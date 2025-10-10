@@ -47,18 +47,34 @@ fi
 # 4.3 CMake 메타데이터 생성 (fprime-util generate)
 # ===========================================
 log_info "CMake 메타데이터 생성 중..."
-echo "  명령: fprime-util generate -DCMAKE_BUILD_TYPE=${BUILD_TYPE}"
+
+# SGFUZZ_ROOT 경로 확인 및 검증
+log_info "SGFuzz 경로 확인: ${SGFUZZ_ROOT}"
+if ! check_file "${SGFUZZ_ROOT}/libsfuzzer.a" "libsfuzzer.a"; then
+    log_error "libsfuzzer.a를 찾을 수 없습니다!"
+    log_error "경로: ${SGFUZZ_ROOT}/libsfuzzer.a"
+    log_info ""
+    log_info "SGFuzz 빌드 확인:"
+    log_info "  cd ${SGFUZZ_ROOT}"
+    log_info "  ./build.sh"
+    exit 1
+fi
+log_success "libsfuzzer.a 확인됨: ${SGFUZZ_ROOT}/libsfuzzer.a"
+
+# CMake에 SGFUZZ_ROOT 경로 명시적 전달
+echo "  명령: fprime-util generate -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DSGFUZZ_ROOT=${SGFUZZ_ROOT}"
 echo ""
 
 # fprime-util generate 실행
-if ! fprime-util generate -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"; then
+if ! fprime-util generate -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" -DSGFUZZ_ROOT="${SGFUZZ_ROOT}"; then
     log_error "fprime-util generate 실패!"
     log_error "CMake 메타데이터 생성 중 오류가 발생했습니다."
     log_info ""
     log_info "디버깅 팁:"
     log_info "  1. ${COMPONENT_PATH}/fuzz/CMakeLists.txt 구문 확인"
     log_info "  2. ${COMPONENT_PATH}/CMakeLists.txt에 add_subdirectory(fuzz) 포함 확인"
-    log_info "  3. ${SGFUZZ_ROOT}/libsfuzzer.a 파일 존재 확인"
+    log_info "  3. SGFUZZ_ROOT 경로: ${SGFUZZ_ROOT}"
+    log_info "  4. libsfuzzer.a 존재: ${SGFUZZ_ROOT}/libsfuzzer.a"
     exit 1
 fi
 
@@ -78,6 +94,25 @@ echo "  타겟: ${COMPONENT_NAME}_fuzz"
 echo "  병렬 작업: ${N_JOBS}개"
 echo "  명령: fprime-util build --target ${COMPONENT_NAME}_fuzz -j ${N_JOBS}"
 echo ""
+
+# 디버그 모드 활성화 여부 확인
+DEBUG_BUILD="${DEBUG_BUILD:-false}"
+if [ "${DEBUG_BUILD}" = "true" ]; then
+    log_info "디버그 모드: 상세 빌드 로그 활성화"
+    export VERBOSE=1
+    
+    # CMake 캐시 변수 확인
+    log_info "CMake 캐시 변수 확인:"
+    if [ -f "${BUILD_DIR}/CMakeCache.txt" ]; then
+        echo ""
+        echo "SGFUZZ_ROOT 설정:"
+        grep "SGFUZZ_ROOT" "${BUILD_DIR}/CMakeCache.txt" || echo "  (설정되지 않음)"
+        echo ""
+        echo "CMAKE_SOURCE_DIR 관련:"
+        grep "CMAKE_SOURCE_DIR" "${BUILD_DIR}/CMakeCache.txt" || echo "  (설정되지 않음)"
+        echo ""
+    fi
+fi
 
 # fprime-util build 실행
 if ! fprime-util build --target "${COMPONENT_NAME}_fuzz" -j "${N_JOBS}"; then

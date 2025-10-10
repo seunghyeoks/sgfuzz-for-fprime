@@ -35,7 +35,15 @@ def generate_cmake_lists(fuzz_dir, component_name, project_root):
 # Generated at: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
 option(ENABLE_FUZZ "Build fuzz targets" ON)
-set(SGFUZZ_ROOT "${{CMAKE_SOURCE_DIR}}/SGFuzz" CACHE PATH "SGFuzz library path")
+
+# SGFUZZ_ROOT 경로 설정 (명령줄에서 전달되지 않은 경우에만 기본값 사용)
+if(NOT DEFINED SGFUZZ_ROOT)
+    # 기본값: CMAKE_SOURCE_DIR의 상위 디렉토리에서 SGFuzz 찾기
+    set(SGFUZZ_ROOT "${{CMAKE_SOURCE_DIR}}/../SGFuzz" CACHE PATH "SGFuzz library path")
+    message(STATUS "SGFUZZ_ROOT not provided, using default: ${{SGFUZZ_ROOT}}")
+else()
+    message(STATUS "Using provided SGFUZZ_ROOT: ${{SGFUZZ_ROOT}}")
+endif()
 
 if(ENABLE_FUZZ)
   message(STATUS "Configuring fuzz target for {component_name}")
