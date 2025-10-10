@@ -27,7 +27,7 @@ RUN pip3 install -U fprime-tools fprime-gds
 # 작업 디렉토리 설정
 WORKDIR /workspace
 
-# fprime 프로젝트 클론 및 설정 (특정 브랜치 지정)
+# fprime 프로젝트 클론 및 설정 (main 브랜치 사용)
 RUN git clone https://github.com/seunghyeoks/sgfuzz-for-fprime.git
 
 # 프로젝트 디렉토리로 이동

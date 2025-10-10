@@ -1,6 +1,15 @@
 FROM baseimage:latest
 
+# 브랜치 인자 설정 (기본값: try)
+ARG BRANCH=try
+
 WORKDIR /workspace/sgfuzz-for-fprime
+
+# 원하는 브랜치로 변경하고 최신 코드 가져오기
+RUN git fetch origin && \
+    git checkout ${BRANCH} && \
+    git pull origin ${BRANCH} && \
+    git submodule update --recursive
 
 # 모듈화된 스크립트 디렉토리 전체 복사
 COPY Sources/shell/ /usr/local/bin/fuzz_scripts/

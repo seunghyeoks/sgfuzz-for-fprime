@@ -52,7 +52,7 @@ fi
 # ===========================================
 log_info "setup_fuzz_target.py 실행 중..."
 
-SETUP_SCRIPT="${PROJECT_ROOT}/scripts/setup_fuzz_target.py"
+SETUP_SCRIPT="${PROJECT_ROOT}/Sources/generator/setup_fuzz_target.py"
 
 if ! check_file "${SETUP_SCRIPT}" "퍼징 타겟 생성 스크립트"; then
     log_error "setup_fuzz_target.py를 찾을 수 없습니다!"
