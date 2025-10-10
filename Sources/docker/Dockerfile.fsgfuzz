@@ -1,7 +1,7 @@
 FROM baseimage:latest
 
-# 브랜치 인자 설정 (기본값: try)
-ARG BRANCH=try
+# 브랜치 인자 설정
+ARG BRANCH=script-optimize
 
 WORKDIR /workspace/sgfuzz-for-fprime
 
@@ -10,20 +10,6 @@ RUN git fetch origin && \
     git checkout ${BRANCH} && \
     git pull origin ${BRANCH} && \
     git submodule update --recursive
-
-# SGFuzz 강제 재빌드 (FuzzerStateMachine 포함 확인)
-# BaseImage의 오래된 libsfuzzer.a를 삭제하고 새로 빌드
-RUN cd SGFuzz && \
-    rm -f libsfuzzer.a Fuzzer*.o && \
-    echo "Patching FuzzerStateMachine.h for Ubuntu compatibility..." && \
-    sed -i '/#include "FuzzerDefs.h"/a #include <limits>  \/\/ for std::numeric_limits (Ubuntu libstdc++ compatibility)' FuzzerStateMachine.h && \
-    echo "Verifying patch applied:" && \
-    head -5 FuzzerStateMachine.h && \
-    dos2unix build.sh && \
-    ./build.sh && \
-    echo "Verifying libsfuzzer.a contents:" && \
-    ls -lh libsfuzzer.a && \
-    ar t libsfuzzer.a | grep FuzzerStateMachine || (echo "ERROR: FuzzerStateMachine.o not found!" && exit 1)
 
 # 모듈화된 스크립트 디렉토리 전체 복사
 COPY Sources/shell/ /usr/local/bin/fuzz_scripts/
