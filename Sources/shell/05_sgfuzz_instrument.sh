@@ -50,8 +50,11 @@ log_info "계측 대상 디렉토리 확인 중..."
 
 # 자동 생성된 코드가 있는 빌드 디렉토리 찾기
 # F Prime 빌드는 여러 구조를 가질 수 있음
+# fuzz 하위 디렉토리에 자동 생성 파일이 복사될 수 있음
 POSSIBLE_TARGETS=(
+    "${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}/fuzz"
     "${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}"
+    "${BUILD_DIR}/Svc/${COMPONENT_NAME}/fuzz"
     "${BUILD_DIR}/Svc/${COMPONENT_NAME}"
 )
 
@@ -64,23 +67,21 @@ for dir in "${POSSIBLE_TARGETS[@]}"; do
     fi
 done
 
-# 표준 경로에서 찾지 못한 경우 전체 검색
+# ⚠️ 중요: 빌드 디렉토리 대신 원본 소스 디렉토리를 계측!
+# 이유:
+#   1. 빌드 디렉토리의 자동 생성 파일(Ac.hpp)은 재빌드시 덮어씌워짐
+#   2. 원본 Impl.cpp를 계측하면 변경사항이 유지됨
+#   3. Impl.cpp가 Ac.hpp를 include하므로 enum 정의 사용 가능
 if [ -z "${TARGET_DIR}" ]; then
-    log_warning "표준 경로에서 자동 생성 코드를 찾을 수 없습니다."
-    log_info "전체 빌드 디렉토리에서 검색 중..."
+    log_info "빌드 디렉토리에서 찾지 못했으므로 원본 소스 디렉토리를 사용합니다."
+    TARGET_DIR="${FPRIME_ROOT}/Svc/${COMPONENT_NAME}"
     
-    # Svc 하위의 컴포넌트 디렉토리 찾기
-    ALT_TARGET=$(find "${BUILD_DIR}" -type d -path "*/Svc/${COMPONENT_NAME}" 2>/dev/null | head -n 1)
-    if [ -n "${ALT_TARGET}" ] && [ -d "${ALT_TARGET}" ]; then
-        TARGET_DIR="${ALT_TARGET}"
-        log_info "발견된 경로: ${TARGET_DIR}"
-    else
-        log_error "자동 생성 코드 디렉토리를 찾을 수 없습니다!"
-        log_error "빌드 디렉토리: ${BUILD_DIR}"
-        log_info "다음 명령으로 수동 검색:"
-        log_info "  find ${BUILD_DIR} -type d -name '${COMPONENT_NAME}'"
+    if [ ! -d "${TARGET_DIR}" ]; then
+        log_error "원본 소스 디렉토리도 찾을 수 없습니다: ${TARGET_DIR}"
         exit 1
     fi
+    
+    log_success "원본 소스 디렉토리 사용: ${TARGET_DIR}"
 fi
 
 # ===========================================

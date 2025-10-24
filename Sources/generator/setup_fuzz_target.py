@@ -126,6 +126,46 @@ endif()
     return cmake_path
 
 
+def copy_impl_for_instrumentation(component_path, fuzz_dir, component_name):
+    """
+    원본 *Impl.cpp를 fuzz/ 디렉토리에 복사 (계측은 나중에)
+    
+    Args:
+        component_path: 컴포넌트 디렉토리 경로
+        fuzz_dir: fuzz 디렉토리 경로
+        component_name: 컴포넌트 이름
+    
+    Returns:
+        복사된 파일 경로 (또는 None)
+    
+    Note:
+        실제 계측은 05_sgfuzz_instrument.sh에서 State_machine_instrument.py로 수행됩니다.
+        이 함수는 단순히 파일을 복사만 합니다.
+    """
+    # *Impl.cpp 파일 찾기
+    impl_pattern = f"{component_name}Impl.cpp"
+    impl_file = component_path / impl_pattern
+    
+    if not impl_file.exists():
+        # 대체 패턴 시도
+        impl_files = list(component_path.glob("*Impl.cpp"))
+        if not impl_files:
+            print(f"⚠️  경고: {impl_pattern} 파일을 찾을 수 없습니다.")
+            print(f"   Impl.cpp 복사를 건너뜁니다.")
+            print(f"   (계측은 05_sgfuzz_instrument.sh에서 원본 파일에 직접 수행됩니다)")
+            return None
+        impl_file = impl_files[0]
+        print(f"✅ Impl 파일 발견: {impl_file.name}")
+    
+    # fuzz/ 디렉토리에 복사
+    copied_path = fuzz_dir / impl_file.name
+    shutil.copy2(impl_file, copied_path)
+    
+    print(f"✅ Impl 파일 복사: {impl_file.name} → fuzz/")
+    print(f"   (SGFuzz 계측은 빌드 후 05_sgfuzz_instrument.sh에서 수행됩니다)")
+    return copied_path
+
+
 def generate_fuzzer_entrypoint(fuzz_dir, component_name):
     """LibFuzzer 엔트리포인트 생성 (템플릿)"""
     
@@ -292,8 +332,19 @@ cd build-fprime-automatic-native
 ## 파일 설명
 
 - `{component_name}_fuzz.cpp`: LibFuzzer 엔트리포인트
+- `{component_name}Impl.cpp`: 구현 파일 복사본 (계측은 빌드 후 수행)
 - `CMakeLists.txt`: 빌드 설정
 - `README.md`: 이 파일
+
+## SGFuzz 계측 정보
+
+SGFuzz 계측은 `05_sgfuzz_instrument.sh` 스크립트에서 자동으로 수행됩니다.
+이 스크립트는 `State_machine_instrument.py`를 사용하여:
+1. 자동 생성된 `*ComponentAc.hpp`에서 enum 정의를 찾습니다
+2. 원본 `{component_name}Impl.cpp`에서 enum 사용 지점을 찾습니다
+3. 자동으로 `__sfuzzer_instrument()` 호출을 삽입합니다
+
+이 과정은 하드코딩 없이 일반적으로 작동하므로, 다른 컴포넌트에도 적용 가능합니다.
 
 ## 생성 정보
 
@@ -394,13 +445,16 @@ def main():
         # 2. CMakeLists.txt 생성
         generate_cmake_lists(fuzz_dir, component_name, project_root, component_path)
         
-        # 3. 퍼저 엔트리포인트 생성
+        # 3. 원본 Impl.cpp를 fuzz/에 복사 (계측은 나중에)
+        copied_impl = copy_impl_for_instrumentation(component_path, fuzz_dir, component_name)
+        
+        # 4. 퍼저 엔트리포인트 생성
         generate_fuzzer_entrypoint(fuzz_dir, component_name)
         
-        # 4. README 생성
+        # 5. README 생성
         create_readme(fuzz_dir, component_name)
         
-        # 5. 상위 CMakeLists.txt 수정
+        # 6. 상위 CMakeLists.txt 수정
         patch_parent_cmake(component_path, component_name)
         
         print("\n" + "="*60)

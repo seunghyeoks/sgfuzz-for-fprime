@@ -85,32 +85,66 @@ if ! check_directory "${BUILD_DIR}" "빌드 디렉토리"; then
 fi
 
 # ===========================================
-# 4.4 자동 생성 코드 확인
+# 4.4 초기 빌드 (자동 생성 코드 생성을 위해)
 # ===========================================
-log_info "자동 생성 코드 확인 중..."
+log_info "자동 생성 코드를 생성하기 위한 초기 빌드 중..."
+echo "  타겟: ${COMPONENT_NAME}_fuzz"
+echo "  명령: fprime-util build --target ${COMPONENT_NAME}_fuzz -j ${N_JOBS}"
+echo ""
 
-# 컴포넌트의 자동 생성 파일 확인
-# F Prime 빌드는 여러 구조를 가질 수 있음:
-# 1. ${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}/
-# 2. ${BUILD_DIR}/Svc/${COMPONENT_NAME}/
-AUTOGEN_FILES=(
-    "${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}/${COMPONENT_NAME}ComponentAc.hpp"
-    "${BUILD_DIR}/Svc/${COMPONENT_NAME}/${COMPONENT_NAME}ComponentAc.hpp"
+# 초기 빌드 (자동 생성 파일 생성)
+if ! fprime-util build --target "${COMPONENT_NAME}_fuzz" -j "${N_JOBS}"; then
+    log_error "초기 빌드 실패!"
+    log_error "자동 생성 코드를 생성할 수 없습니다."
+    log_info ""
+    log_info "디버깅 팁:"
+    log_info "  1. 퍼징 타겟이 제대로 설정되었는지 확인"
+    log_info "  2. ${COMPONENT_PATH}/fuzz/CMakeLists.txt 확인"
+    log_info "  3. 컴포넌트 소스 파일 오류 확인"
+    exit 1
+fi
+
+log_success "초기 빌드 완료 - 자동 생성 파일이 생성되었습니다"
+
+# ===========================================
+# 4.5 자동 생성 코드 확인
+# ===========================================
+log_info "생성된 자동 생성 파일 확인 중..."
+
+# 자동 생성된 *Ac.hpp 파일 찾기
+AUTOGEN_COUNT=$(find "${BUILD_DIR}" -name "*ComponentAc.hpp" 2>/dev/null | wc -l | tr -d ' ')
+log_info "발견된 자동 생성 헤더 파일: ${AUTOGEN_COUNT}개"
+
+# CmdDispatcher의 자동 생성 파일 확인
+POSSIBLE_AUTOGEN_PATHS=(
+    "${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}/fuzz/CommandDispatcherComponentAc.hpp"
+    "${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}/CommandDispatcherComponentAc.hpp"
+    "${BUILD_DIR}/Svc/${COMPONENT_NAME}/fuzz/CommandDispatcherComponentAc.hpp"
+    "${BUILD_DIR}/Svc/${COMPONENT_NAME}/CommandDispatcherComponentAc.hpp"
 )
 
-log_info "자동 생성 파일 검색 중..."
-for file in "${AUTOGEN_FILES[@]}"; do
+FOUND_AUTOGEN=false
+for file in "${POSSIBLE_AUTOGEN_PATHS[@]}"; do
     if [ -f "$file" ]; then
-        log_success "✓ $(basename $file)"
-    else
-        log_warning "✗ $(basename $file) - 아직 생성되지 않았을 수 있음"
+        log_success "✓ 자동 생성 파일 발견: $(basename $file)"
+        log_info "  경로: ${file}"
+        FOUND_AUTOGEN=true
+        break
     fi
 done
 
-# 자동 생성된 enum 파일 찾기
-log_info "자동 생성된 enum 파일 검색 중..."
-ENUM_FILES=$(find "${BUILD_DIR}" -name "*Ac.hpp" -o -name "*Ac.cpp" 2>/dev/null | wc -l)
-log_info "발견된 자동 생성 파일 수: ${ENUM_FILES}개"
+if [ "$FOUND_AUTOGEN" = false ]; then
+    log_warning "표준 경로에서 자동 생성 파일을 찾을 수 없습니다"
+    log_info "전체 검색 중..."
+    FOUND_FILE=$(find "${BUILD_DIR}" -name "CommandDispatcherComponentAc.hpp" 2>/dev/null | head -n 1)
+    if [ -n "$FOUND_FILE" ]; then
+        log_success "✓ 자동 생성 파일 발견: ${FOUND_FILE}"
+    else
+        log_error "자동 생성 파일을 찾을 수 없습니다!"
+        log_info "다음 명령으로 수동 검색:"
+        log_info "  find ${BUILD_DIR} -name '*ComponentAc.hpp'"
+    fi
+fi
 
 echo ""
 log_success "F Prime 자동 생성 코드 생성 완료!"
