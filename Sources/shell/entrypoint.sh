@@ -56,19 +56,35 @@ else
     exit 1
 fi
 
-# 단계 4: F Prime 빌드
-if [ -f "${SCRIPT_DIR}/04_build_fprime.sh" ]; then
-    source "${SCRIPT_DIR}/04_build_fprime.sh" || handle_step_failure "4" "F Prime 빌드"
+# 단계 4: F Prime 자동 생성 코드 생성
+if [ -f "${SCRIPT_DIR}/04_generate_fprime.sh" ]; then
+    source "${SCRIPT_DIR}/04_generate_fprime.sh" || handle_step_failure "4" "F Prime 자동 생성"
 else
-    log_error "04_build_fprime.sh를 찾을 수 없습니다!"
+    log_error "04_generate_fprime.sh를 찾을 수 없습니다!"
     exit 1
 fi
 
-# 단계 5: 퍼저 실행
-if [ -f "${SCRIPT_DIR}/05_run_fuzzer.sh" ]; then
-    source "${SCRIPT_DIR}/05_run_fuzzer.sh" || handle_step_failure "5" "퍼저 실행"
+# 단계 5: SGFuzz 계측
+if [ -f "${SCRIPT_DIR}/05_sgfuzz_instrument.sh" ]; then
+    source "${SCRIPT_DIR}/05_sgfuzz_instrument.sh" || handle_step_failure "5" "SGFuzz 계측"
 else
-    log_error "05_run_fuzzer.sh를 찾을 수 없습니다!"
+    log_error "05_sgfuzz_instrument.sh를 찾을 수 없습니다!"
+    exit 1
+fi
+
+# 단계 6: F Prime 빌드
+if [ -f "${SCRIPT_DIR}/06_build_fprime.sh" ]; then
+    source "${SCRIPT_DIR}/06_build_fprime.sh" || handle_step_failure "6" "F Prime 빌드"
+else
+    log_error "06_build_fprime.sh를 찾을 수 없습니다!"
+    exit 1
+fi
+
+# 단계 7: 퍼저 실행
+if [ -f "${SCRIPT_DIR}/07_run_fuzzer.sh" ]; then
+    source "${SCRIPT_DIR}/07_run_fuzzer.sh" || handle_step_failure "7" "퍼저 실행"
+else
+    log_error "07_run_fuzzer.sh를 찾을 수 없습니다!"
     exit 1
 fi
 
@@ -96,8 +112,10 @@ echo "  실행된 단계:"
 echo "    ✓ 1. 환경 변수 설정"
 echo "    ✓ 2. 의존성 확인"
 echo "    ✓ 3. 퍼징 타겟 설정"
-echo "    ✓ 4. F Prime 빌드"
-echo "    ✓ 5. 퍼저 실행"
+echo "    ✓ 4. F Prime 자동 생성 코드 생성"
+echo "    ✓ 5. SGFuzz 계측"
+echo "    ✓ 6. F Prime 빌드"
+echo "    ✓ 7. 퍼저 실행"
 echo ""
 
 # ===========================================

@@ -1,7 +1,7 @@
 #!/bin/bash
-# 단계 5: 퍼저 실행
-# SUMMARY.md 전략 단계 6 반영:
-#   - LibFuzzer 실행
+# 단계 7: 퍼저 실행
+# SUMMARY.md 전략 단계 8 반영:
+#   - SGFuzz 실행 (상태 기반 퍼징)
 #   - corpus, crashes, artifacts 관리
 #   - 실행 로그 및 통계 수집
 
@@ -24,11 +24,11 @@ if [ -f "${ENV_FILE}" ]; then
     source "${ENV_FILE}"
 fi
 
-log_step "5" "퍼저 실행"
+log_step "7" "퍼저 실행"
 start_timer
 
 # ===========================================
-# 5.1 퍼저 실행 파일 확인
+# 7.1 퍼저 실행 파일 확인
 # ===========================================
 log_info "퍼저 실행 파일 확인 중..."
 
