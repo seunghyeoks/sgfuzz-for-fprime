@@ -8,17 +8,19 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-# 컨테이너 환경 확인
-if [ ! -d "/workspace/sgfuzz-for-fprime" ]; then
-    log_error "컨테이너 환경이 아닙니다!"
-    log_error "이 스크립트는 Docker 컨테이너 내부에서만 실행되어야 합니다."
-    exit 1
-fi
+# 환경 변수 로드 (먼저 로드해서 PROJECT_ROOT 사용)
+WORKSPACE_ROOT="${WORKSPACE_ROOT:-/workspace/sgfuzz-for-fprime}"
+ENV_FILE="${WORKSPACE_ROOT}/.fuzz_env"
 
-# 환경 변수 로드
-ENV_FILE="/workspace/sgfuzz-for-fprime/.fuzz_env"
 if [ -f "${ENV_FILE}" ]; then
     source "${ENV_FILE}"
+fi
+
+# 컨테이너 환경 확인
+if [ ! -d "${PROJECT_ROOT}" ]; then
+    log_error "프로젝트 루트를 찾을 수 없습니다: ${PROJECT_ROOT}"
+    log_error "이 스크립트는 Docker 컨테이너 내부에서만 실행되어야 합니다."
+    exit 1
 fi
 
 log_step "2" "의존성 확인"
@@ -69,66 +71,9 @@ fi
 
 log_success "모든 필수 도구 확인 완료"
 
-# ===========================================
-# 2.2 SGFuzz 라이브러리 확인
-# ===========================================
-log_info "SGFuzz 라이브러리 확인 중..."
-
-LIBSFUZZER_PATH="${SGFUZZ_ROOT}/libsfuzzer.a"
-
-if [ ! -f "${LIBSFUZZER_PATH}" ]; then
-    log_warning "libsfuzzer.a를 찾을 수 없습니다: ${LIBSFUZZER_PATH}"
-    log_info "SGFuzz 빌드를 시작합니다..."
-    
-    cd "${SGFUZZ_ROOT}"
-    
-    # build.sh 실행
-    if [ ! -f "./build.sh" ]; then
-        log_error "SGFuzz 빌드 스크립트를 찾을 수 없습니다: ${SGFUZZ_ROOT}/build.sh"
-        exit 1
-    fi
-    
-    chmod +x ./build.sh
-    
-    log_info "실행: ./build.sh"
-    if ! ./build.sh; then
-        log_error "SGFuzz 빌드 실패!"
-        exit 1
-    fi
-    
-    # 빌드 후 재확인
-    if [ ! -f "${LIBSFUZZER_PATH}" ]; then
-        log_error "SGFuzz 빌드 후에도 libsfuzzer.a를 찾을 수 없습니다!"
-        exit 1
-    fi
-fi
-
-log_success "SGFuzz 라이브러리 확인 완료: ${LIBSFUZZER_PATH}"
-
-# 라이브러리 정보 출력
-if command -v file >/dev/null 2>&1; then
-    log_info "libsfuzzer.a 정보:"
-    file "${LIBSFUZZER_PATH}"
-fi
 
 # ===========================================
-# 2.3 SGFuzz 계측 스크립트 확인
-# ===========================================
-log_info "SGFuzz 계측 스크립트 확인 중..."
-
-INSTRUMENT_SCRIPT="${SGFUZZ_ROOT}/sanitizer/State_machine_instrument.py"
-if ! check_file "${INSTRUMENT_SCRIPT}" "State_machine_instrument.py"; then
-    log_error "SGFuzz 계측 스크립트를 찾을 수 없습니다!"
-    exit 1
-fi
-
-# Python 스크립트 실행 권한 확인
-chmod +x "${INSTRUMENT_SCRIPT}" || true
-
-log_success "SGFuzz 계측 스크립트 확인 완료"
-
-# ===========================================
-# 2.4 F Prime 요구사항 확인
+# 2.2 F Prime 요구사항 확인
 # ===========================================
 log_info "F Prime 요구사항 확인 중..."
 

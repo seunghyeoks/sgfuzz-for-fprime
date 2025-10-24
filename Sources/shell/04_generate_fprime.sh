@@ -10,17 +10,19 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
-# 컨테이너 환경 확인
-if [ ! -d "/workspace/sgfuzz-for-fprime" ]; then
-    log_error "컨테이너 환경이 아닙니다!"
-    log_error "이 스크립트는 Docker 컨테이너 내부에서만 실행되어야 합니다."
-    exit 1
-fi
+# 환경 변수 로드 (먼저 로드해서 PROJECT_ROOT 사용)
+WORKSPACE_ROOT="${WORKSPACE_ROOT:-/workspace/sgfuzz-for-fprime}"
+ENV_FILE="${WORKSPACE_ROOT}/.fuzz_env"
 
-# 환경 변수 로드
-ENV_FILE="/workspace/sgfuzz-for-fprime/.fuzz_env"
 if [ -f "${ENV_FILE}" ]; then
     source "${ENV_FILE}"
+fi
+
+# 컨테이너 환경 확인
+if [ ! -d "${PROJECT_ROOT}" ]; then
+    log_error "프로젝트 루트를 찾을 수 없습니다: ${PROJECT_ROOT}"
+    log_error "이 스크립트는 Docker 컨테이너 내부에서만 실행되어야 합니다."
+    exit 1
 fi
 
 log_step "4" "F Prime 자동 생성 코드 생성"
@@ -87,10 +89,13 @@ fi
 # ===========================================
 log_info "자동 생성 코드 확인 중..."
 
-# CmdDispatcher의 자동 생성 파일 확인
+# 컴포넌트의 자동 생성 파일 확인
+# F Prime 빌드는 여러 구조를 가질 수 있음:
+# 1. ${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}/
+# 2. ${BUILD_DIR}/Svc/${COMPONENT_NAME}/
 AUTOGEN_FILES=(
-    "${BUILD_DIR}/fprime/Svc/${COMPONENT_NAME}/CommandDispatcherComponentAc.hpp"
-    "${BUILD_DIR}/fprime/Svc/${COMPONENT_NAME}/CommandDispatcherComponentAc.cpp"
+    "${BUILD_DIR}/F-Prime/Svc/${COMPONENT_NAME}/${COMPONENT_NAME}ComponentAc.hpp"
+    "${BUILD_DIR}/Svc/${COMPONENT_NAME}/${COMPONENT_NAME}ComponentAc.hpp"
 )
 
 log_info "자동 생성 파일 검색 중..."
