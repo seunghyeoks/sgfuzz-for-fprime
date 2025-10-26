@@ -11,24 +11,47 @@ RUN git fetch origin && \
     git pull origin ${BRANCH} && \
     git submodule update --recursive
 
-# 모듈화된 스크립트 디렉토리 전체 복사
-COPY Sources/shell/ /usr/local/bin/fuzz_scripts/
-COPY Sources/generator/ /workspace/sgfuzz-for-fprime/Sources/generator/
+# ===========================================
+# 필요한 파일들만 COPY (변경사항 추적)
+# ===========================================
 
-# fuzz 추가로 인한 빌드 디렉토리 정리 (다음 generate에서 fuzz 포함)
+# 1. 단일 퍼징 스크립트 복사
+COPY Sources/run_fuzz.sh /workspace/run_fuzz.sh
+RUN chmod +x /workspace/run_fuzz.sh && dos2unix /workspace/run_fuzz.sh
+
+# 2. 로컬에서 작성한 fuzz 폴더 복사
+COPY fprime/Svc/CmdDispatcher/fuzz/ /workspace/sgfuzz-for-fprime/fprime/Svc/CmdDispatcher/fuzz/
+COPY fprime/Svc/CmdDispatcher/test/ut/ /workspace/sgfuzz-for-fprime/fprime/Svc/CmdDispatcher/test/ut/
+
+# 3. 상위 CMakeLists.txt 복사 (add_subdirectory(fuzz) 포함)
+COPY fprime/Svc/CmdDispatcher/CMakeLists.txt /workspace/sgfuzz-for-fprime/fprime/Svc/CmdDispatcher/CMakeLists.txt
+
+# 4. SGFuzz 계측 스크립트 복사 (이미 SGFuzz가 baseimage에 있지만, 변경 추적을 위해)
+COPY SGFuzz/sanitizer/State_machine_instrument.py /workspace/sgfuzz-for-fprime/SGFuzz/sanitizer/State_machine_instrument.py
+
+# 5. 기존 빌드 디렉토리 정리
 RUN rm -rf /workspace/sgfuzz-for-fprime/fprime/build-fprime-automatic-native
 
-# 줄 끝 문자 변환 (모든 .sh 파일)
-RUN find /usr/local/bin/fuzz_scripts -name "*.sh" -exec dos2unix {} \;
+# ===========================================
+# 환경 변수 설정 (필요시 docker-compose.yml에서 오버라이드)
+# ===========================================
+ENV PROJECT_ROOT=/workspace/sgfuzz-for-fprime
+ENV FPRIME_ROOT=/workspace/sgfuzz-for-fprime/fprime
+ENV SGFUZZ_ROOT=/workspace/sgfuzz-for-fprime/SGFuzz
+ENV COMPONENT_NAME=CmdDispatcher
+ENV BUILD_DIR=/workspace/sgfuzz-for-fprime/fprime/build-fprime-automatic-native
+ENV FUZZ_OUTPUT=/workspace/sgfuzz-for-fprime/fuzz_output
 
-# 실행 권한 부여 (모든 .sh 파일)
-RUN find /usr/local/bin/fuzz_scripts -name "*.sh" -exec chmod +x {} \;
+# 컴파일러 설정 (SGFuzz는 Clang 필수!)
+ENV CC=clang
+ENV CXX=clang++
 
-# Python 스크립트 권한 설정
-RUN chmod +x /workspace/sgfuzz-for-fprime/scripts/*.py 2>/dev/null || true
+# 퍼저 옵션 (기본값)
+ENV FUZZ_RUNS=-1
+ENV FUZZ_MAX_LEN=1024
+ENV FUZZ_TIMEOUT=60
 
-# 심볼릭 링크 생성 (호환성 유지)
-RUN ln -sf /usr/local/bin/fuzz_scripts/entrypoint.sh /usr/local/bin/entrypoint.sh
-
-# 컨테이너 실행 시 메인 엔트리포인트 실행
-ENTRYPOINT ["/usr/local/bin/fuzz_scripts/entrypoint.sh"]
+# ===========================================
+# 엔트리포인트: 단일 스크립트 실행
+# ===========================================
+ENTRYPOINT ["/workspace/run_fuzz.sh"]

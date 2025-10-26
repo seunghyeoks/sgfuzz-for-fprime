@@ -47,8 +47,6 @@ def generate_cmake_lists(fuzz_dir, component_name, project_root, component_path)
     cmake_content = f'''# Auto-generated CMakeLists.txt for {component_name} fuzzing target
 # Generated at: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
-option(ENABLE_FUZZ "Build fuzz targets" ON)
-
 # SGFUZZ_ROOT 경로 설정 (명령줄에서 전달되지 않은 경우에만 기본값 사용)
 if(NOT DEFINED SGFUZZ_ROOT)
     # 기본값: CMAKE_SOURCE_DIR의 상위 디렉토리에서 SGFuzz 찾기
@@ -58,64 +56,60 @@ else()
     message(STATUS "Using provided SGFUZZ_ROOT: ${{SGFUZZ_ROOT}}")
 endif()
 
-if(ENABLE_FUZZ)
-  message(STATUS "Configuring fuzz target for {component_name}")
+message(STATUS "Configuring fuzz target for {component_name}")
 
-  # 상위 스코프에서 설정된 역사적 변수 제거 (신규 API와 혼용 금지)
-  unset(SOURCE_FILES)
-  unset(MOD_DEPS)
-  unset(UT_SOURCE_FILES)
-  unset(EXECUTABLE_NAME)
+# 상위 스코프에서 설정된 역사적 변수 제거 (신규 API와 혼용 금지)
+unset(SOURCE_FILES)
+unset(MOD_DEPS)
+unset(UT_SOURCE_FILES)
+unset(EXECUTABLE_NAME)
 
-  # 플랫폼 의존 링크 항목 구성
-  set(EXTRA_DEPS "${{SGFUZZ_ROOT}}/libsfuzzer.a" pthread)
-  if(NOT APPLE)
-    list(APPEND EXTRA_DEPS dl)
-  endif()
-
-  # 퍼징 실행 파일 등록
-  # AUTOCODER_INPUTS로 원본 컴포넌트의 .fpp 파일을 지정하여 오토코더 실행
-  register_fprime_executable(
-    {component_name}_fuzz
-    SOURCES
-      "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트
-    AUTOCODER_INPUTS
-      "${{CMAKE_CURRENT_LIST_DIR}}/{fpp_input}"                # 원본 .fpp로 오토코더 실행
-    DEPENDS
-      Svc_{component_name}  # 원본 컴포넌트 라이브러리 (언더스코어 사용)
-      ${{EXTRA_DEPS}}       # SGFuzz 라이브러리 (FuzzerStateMachine.o 포함)
-  )
-
-  # 원본 컴포넌트가 먼저 빌드되도록 명시적 의존성 추가
-  if(TARGET Svc_{component_name})
-    add_dependencies({component_name}_fuzz Svc_{component_name})
-    message(STATUS "  - Build dependency: Svc_{component_name} will be built first")
-  endif()
-
-  # 컴파일 및 링크 옵션 설정
-  target_compile_options({component_name}_fuzz PRIVATE 
-    -fsanitize=fuzzer-no-link  # LibFuzzer 메인 중복 방지
-    -g                         # 디버그 심볼
-    -O1                        # 최소 최적화
-  )
-  
-  target_link_options({component_name}_fuzz PRIVATE 
-    -fsanitize=fuzzer-no-link
-  )
-
-  # SGFuzz 헤더 경로 추가
-  target_include_directories({component_name}_fuzz PRIVATE 
-    "${{SGFUZZ_ROOT}}"
-    "${{SGFUZZ_ROOT}}/include"
-  )
-
-  message(STATUS "Fuzz target {component_name}_fuzz configured successfully")
-  message(STATUS "  - Linked library: Svc_{component_name}")
-  message(STATUS "  - Autocoder input: {fpp_input}")
-  message(STATUS "  - SGFuzz library: ${{SGFUZZ_ROOT}}/libsfuzzer.a")
-else()
-  message(STATUS "Fuzzing disabled for {component_name}")
+# 플랫폼 의존 링크 항목 구성
+set(EXTRA_DEPS "${{SGFUZZ_ROOT}}/libsfuzzer.a" pthread)
+if(NOT APPLE)
+  list(APPEND EXTRA_DEPS dl)
 endif()
+
+# 퍼징 실행 파일 등록
+# AUTOCODER_INPUTS로 원본 컴포넌트의 .fpp 파일을 지정하여 오토코더 실행
+register_fprime_executable(
+  {component_name}_fuzz
+  SOURCES
+    "${{CMAKE_CURRENT_LIST_DIR}}/{component_name}_fuzz.cpp"  # LibFuzzer 엔트리포인트
+  AUTOCODER_INPUTS
+    "${{CMAKE_CURRENT_LIST_DIR}}/{fpp_input}"                # 원본 .fpp로 오토코더 실행
+  DEPENDS
+    Svc_{component_name}  # 원본 컴포넌트 라이브러리 (언더스코어 사용)
+    ${{EXTRA_DEPS}}       # SGFuzz 라이브러리 (FuzzerStateMachine.o 포함)
+)
+
+# 원본 컴포넌트가 먼저 빌드되도록 명시적 의존성 추가
+if(TARGET Svc_{component_name})
+  add_dependencies({component_name}_fuzz Svc_{component_name})
+  message(STATUS "  - Build dependency: Svc_{component_name} will be built first")
+endif()
+
+# 컴파일 및 링크 옵션 설정
+target_compile_options({component_name}_fuzz PRIVATE 
+  -fsanitize=fuzzer-no-link  # LibFuzzer 메인 중복 방지
+  -g                         # 디버그 심볼
+  -O1                        # 최소 최적화
+)
+
+target_link_options({component_name}_fuzz PRIVATE 
+  -fsanitize=fuzzer-no-link
+)
+
+# SGFuzz 헤더 경로 추가
+target_include_directories({component_name}_fuzz PRIVATE 
+  "${{SGFUZZ_ROOT}}"
+  "${{SGFUZZ_ROOT}}/include"
+)
+
+message(STATUS "Fuzz target {component_name}_fuzz configured successfully")
+message(STATUS "  - Linked library: Svc_{component_name}")
+message(STATUS "  - Autocoder input: {fpp_input}")
+message(STATUS "  - SGFuzz library: ${{SGFUZZ_ROOT}}/libsfuzzer.a")
 '''
     
     cmake_path = fuzz_dir / "CMakeLists.txt"
