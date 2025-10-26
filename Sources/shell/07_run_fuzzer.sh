@@ -103,7 +103,7 @@ fi
 log_info "퍼저 옵션 설정 중..."
 
 # 기본값 설정 (환경 변수가 없는 경우)
-FUZZ_RUNS="${FUZZ_RUNS:-0}"              # 0 = 무한 실행
+FUZZ_RUNS="${FUZZ_RUNS:--1}"             # -1 = 무한 실행, 양수 = 지정된 횟수
 FUZZ_MAX_LEN="${FUZZ_MAX_LEN:-1024}"     # 최대 입력 크기
 FUZZ_TIMEOUT="${FUZZ_TIMEOUT:-60}"       # 개별 입력 타임아웃(초)
 FUZZ_WORKERS="${FUZZ_WORKERS:-1}"        # 병렬 워커 수
@@ -114,7 +114,6 @@ FUZZER_ARGS=(
     "${FUZZ_OUTPUT}/corpus"                          # corpus 디렉토리
     "-max_len=${FUZZ_MAX_LEN}"                       # 최대 입력 크기
     "-timeout=${FUZZ_TIMEOUT}"                       # 타임아웃
-    "-runs=${FUZZ_RUNS}"                             # 실행 횟수
     "-workers=${FUZZ_WORKERS}"                       # 워커 수
     "-artifact_prefix=${FUZZ_OUTPUT}/artifacts/"     # artifact 저장 경로
     "-print_final_stats=1"                           # 최종 통계 출력
@@ -122,6 +121,11 @@ FUZZER_ARGS=(
     "-print_pcs=1"                                   # PC 커버리지 출력
     "-print_coverage=1"                              # 커버리지 출력
 )
+
+# runs 옵션은 -1이 아닐 때만 추가 (-1은 무한 실행의 기본값)
+if [ "${FUZZ_RUNS}" -ne -1 ]; then
+    FUZZER_ARGS+=("-runs=${FUZZ_RUNS}")
+fi
 
 # 추가 인자가 있으면 포함
 if [ -n "${FUZZ_EXTRA_ARGS}" ]; then
@@ -140,7 +144,7 @@ echo "  컴포넌트: ${COMPONENT_NAME}"
 echo ""
 echo "  옵션:"
 echo "    - 최대 입력 크기: ${FUZZ_MAX_LEN} bytes"
-echo "    - 실행 횟수: ${FUZZ_RUNS} $([ ${FUZZ_RUNS} -eq 0 ] && echo '(무한)')"
+echo "    - 실행 횟수: $([ ${FUZZ_RUNS} -eq -1 ] && echo '무한' || echo ${FUZZ_RUNS})"
 echo "    - 타임아웃: ${FUZZ_TIMEOUT}초"
 echo "    - 워커 수: ${FUZZ_WORKERS}"
 echo ""
