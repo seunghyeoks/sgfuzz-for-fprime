@@ -18,7 +18,7 @@ export CC="${CC:-clang}"
 export CXX="${CXX:-clang++}"
 
 # 퍼저 옵션
-export FUZZ_RUNS="${FUZZ_RUNS:-0}"
+export FUZZ_RUNS="${FUZZ_RUNS:--1}"
 export FUZZ_MAX_LEN="${FUZZ_MAX_LEN:-1024}"
 export FUZZ_TIMEOUT="${FUZZ_TIMEOUT:-60}"
 
@@ -75,6 +75,14 @@ if [ -z "${FUZZER_BIN}" ]; then
 fi
 
 echo "Fuzzer: ${FUZZER_BIN}"
+echo "Fuzzer options:"
+if [ "${FUZZ_RUNS}" = "-1" ]; then
+    echo "  - FUZZ_RUNS=${FUZZ_RUNS} (infinite)"
+else
+    echo "  - FUZZ_RUNS=${FUZZ_RUNS}"
+fi
+echo "  - FUZZ_MAX_LEN=${FUZZ_MAX_LEN}"
+echo "  - FUZZ_TIMEOUT=${FUZZ_TIMEOUT}"
 
 cd "${FUZZ_OUTPUT}"
 "${FUZZER_BIN}" \
