@@ -85,6 +85,11 @@ echo "  - FUZZ_MAX_LEN=${FUZZ_MAX_LEN}"
 echo "  - FUZZ_TIMEOUT=${FUZZ_TIMEOUT}"
 
 cd "${FUZZ_OUTPUT}"
+
+# 실제 실행 명령어 출력 (디버깅용)
+echo "Executing: ${FUZZER_BIN} corpus -max_len=${FUZZ_MAX_LEN} -timeout=${FUZZ_TIMEOUT} -runs=${FUZZ_RUNS} -artifact_prefix=artifacts/"
+echo ""
+
 "${FUZZER_BIN}" \
     corpus \
     -max_len="${FUZZ_MAX_LEN}" \

@@ -1,7 +1,7 @@
 FROM baseimage:latest
 
 # 브랜치 인자 설정
-ARG BRANCH=script-optimize
+ARG BRANCH=offline
 
 WORKDIR /workspace/sgfuzz-for-fprime
 
