@@ -1,6 +1,7 @@
 [submodule "fprime"]
 	path = fprime
-	url = https://github.com/nasa/fprime.git
+	url = git@github.com:seunghyeoks/fprime.git
+	branch = target
 [submodule "SGFuzz"]
 	path = SGFuzz
 	url = https://github.com/seunghyeoks/SGFuzz.git

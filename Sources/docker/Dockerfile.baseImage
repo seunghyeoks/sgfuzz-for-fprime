@@ -46,7 +46,7 @@ RUN git submodule init && git submodule update --init --recursive
 RUN fprime-util generate && fprime-util build
 RUN git submodule update --init --recursive
 
-# SGFuzz 빌드
+# SGFuzz 빌드, sanitizer를 위해 나중에 실행 됨
 WORKDIR /workspace/sgfuzz-for-fprime/SGFuzz
 RUN ./build.sh 2>&1 | tee /tmp/build.log; \
     if grep -qi "error" /tmp/build.log; then \
